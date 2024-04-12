@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Bluetooth Demo</title>
+</head>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 2;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+table {
+    width: 400px;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th {
+    background-color: #f2f2f2;
+    color: #333;
+    font-weight: bold;
+    padding: 8px;
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+}
+
+td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+button {
+    background-color: #0096FF;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 3px 2px;
+    cursor: pointer;
+}
+
+table button {
+    background-color: grey;
+    border: none;
+    color: white;
+    padding: 10px 18px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 13px;
+    margin: 3px 2px;
+    cursor: pointer;
+}
+
+#main_name {
+    visibility: hidden;
+}
+
+/*#battery_level_container::after {
+    content: "%";
+}
+
+#battery_ampere_container::after {
+    content: "A";
+}
+
+#battery_voltage_container::after {
+    content: "V";
+}*/
+
+
+</style>
+<body>
+    <button id="connectButton">Select BLE Device to connect to</button>
+    <h3 id="device_name"></h3>
+    <table>
+        <tr>
+            <th>Service</th>
+            <th>Value</th>
+        </tr>
+        <tr>
+            <td>Battery Level</td>
+            <td id="battery_level_container"></td>
+            <td><button id="observeLevel">Observe</button></td>
+            <td><button id="readLevel">Read</button></td>
+        </tr>
+        <tr>
+            <td>Battery Voltage</td>
+            <td id="battery_voltage_container"></td>
+            <td><button id="observeVoltage">Observe</button></td>
+            <td><button id="readVoltage">Read</button></td>
+        </tr>
+        <tr>
+            <td>Battery Ampere</td>
+            <td id="battery_ampere_container"></td>
+            <td><button id="observeAmpere">Observe</button></td>
+            <td><button id="readAmpere">Read</button></td>
+        </tr>
+    </table>
+    <script>
+        document.getElementById('connectButton').addEventListener('click', async () => {
+            try {
+                // Request Bluetooth device
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['battery_service']
+                });
+
+                console.log('Device Name:', device.name);
+                document.getElementById('device_name').innerText = 'Connected to: ' + device.name;
+                document.getElementById('connectButton').style.backgroundColor = 'green';
+                console.log('Device ID:', device.id);
+
+                // Connect to the selected device
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('battery_service');
+
+                // Get characteristic by UUID
+                const batteryLevel = await service.getCharacteristic('00002a19-0000-1000-8000-00805f9b34fb');
+                const batteryVoltage = await service.getCharacteristic('347ba623-f41a-4b59-a508-de45079b4f20');
+                const batteryAmpere = await service.getCharacteristic('32b4e46d-807f-4e75-add7-b08a613e76f3');
+
+                // Containers where data is shown
+                const batteryLevelContainer = document.getElementById("battery_level_container");
+                const batteryVoltageContainer = document.getElementById("battery_voltage_container");
+                const batteryAmpereContainer = document.getElementById("battery_ampere_container");
+
+                // Add event listener for characteristics
+                batteryLevel.addEventListener('characteristicvaluechanged', (event) => {
+                    const value = event.target.value;
+                    batteryLevelContainer.innerText = value.getUint8(0);
+                });
+
+               batteryVoltage.addEventListener('characteristicvaluechanged', (event) => {
+                    const value = event.target.value;
+                    const voltageInt = value.getUint32(0, true); // GATT sends Int
+                    const voltage = voltageInt / 1000.0; // To set decimal position
+                    batteryVoltageContainer.innerText = voltage.toFixed(3);
+                });
+
+               batteryAmpere.addEventListener('characteristicvaluechanged', (event) => {
+                    const value = event.target.value;
+                    const voltageInt = value.getUint32(0, true); // GATT sends Int
+                    const voltage = voltageInt / 1000.0; // To set decimal position
+                    batteryAmpereContainer.innerText = voltage.toFixed(3);
+                });
+
+                function startNotifications(characteristic, container) {
+                    return async () => {
+                        try {
+                            console.log("Starting obeserve")
+                            await characteristic.startNotifications();
+                            container.style.backgroundColor = "green"
+                        } catch (error) {
+                            console.error('Error starting notifications:', error);
+                        }
+                    };
+                }
+
+                // Read with int to float handle
+                function readBLE(characteristic, container, button) {
+                    return async () => {
+                        try {
+                            const value = await characteristic.readValue();
+                            container.innerText = value.getUint8(0)
+
+                            button.style.backgroundColor = "green"
+                            setTimeout(function() {
+                                button.style.backgroundColor = "grey";
+                            }, 300);
+
+                        } catch (error) {
+                            console.error('Error reading value:', error);
+                        }
+                    };
+                }
+
+                function readBLEFloat(characteristic, container, button) {
+                    return async () => {
+                        try {
+                            const value = await characteristic.readValue();
+                            const valueInt = value.getUint32(0, true); // GATT sends Int
+                            const withDecimal = valueInt / 1000.0; // To set decimal position
+                            container.innerText = withDecimal.toFixed(3);
+
+                            button.style.backgroundColor = "green"
+                            setTimeout(function() {
+                                button.style.backgroundColor = "grey";
+                            }, 300);
+
+                        } catch (error) {
+                            console.error('Error reading value:', error);
+                        }
+                    };
+                }
+
+                // Starts observe
+                document.getElementById('observeLevel').addEventListener('click', startNotifications(batteryLevel, document.getElementById('observeLevel')));
+                document.getElementById('observeVoltage').addEventListener('click', startNotifications(batteryVoltage, document.getElementById('observeVoltage')));
+                document.getElementById('observeAmpere').addEventListener('click', startNotifications(batteryAmpere, document.getElementById('observeAmpere')));
+
+                // Reads from gatt profile
+                document.getElementById('readLevel').addEventListener('click', readBLE(batteryLevel, batteryLevelContainer, document.getElementById('readLevel')));
+                document.getElementById('readVoltage').addEventListener('click', readBLEFloat(batteryVoltage, batteryVoltageContainer, document.getElementById('readVoltage')));
+                document.getElementById('readAmpere').addEventListener('click', readBLEFloat(batteryAmpere, batteryAmpereContainer, document.getElementById('readAmpere')));
+
+
+
+            } catch (error) {
+                console.error('Bluetooth error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
