@@ -104,6 +104,7 @@ table button {
             <td><button id="readAmpere">Read</button></td>
         </tr>
     </table>
+    <button id="performanceTest">Start performance test</button>
     <script>
         document.getElementById('connectButton').addEventListener('click', async () => {
             try {
@@ -165,53 +166,97 @@ table button {
                 }
 
                 // Read with int to float handle
-                function readBLE(characteristic, container, button) {
-                    return async () => {
+                async function readBLE(characteristic, container, button) {
+                    button.style.backgroundColor = "green"
                         try {
                             const value = await characteristic.readValue();
                             container.innerText = value.getUint8(0)
-
-                            button.style.backgroundColor = "green"
-                            setTimeout(function() {
-                                button.style.backgroundColor = "grey";
-                            }, 300);
+                            button.style.backgroundColor = "grey";
 
                         } catch (error) {
                             console.error('Error reading value:', error);
                         }
-                    };
                 }
 
-                function readBLEFloat(characteristic, container, button) {
-                    return async () => {
+                async function readBLEFloat(characteristic, container, button) {
+                    button.style.backgroundColor = "green"
                         try {
                             const value = await characteristic.readValue();
                             const valueInt = value.getUint32(0, true); // GATT sends Int
                             const withDecimal = valueInt / 1000.0; // To set decimal position
                             container.innerText = withDecimal.toFixed(3);
-
-                            button.style.backgroundColor = "green"
-                            setTimeout(function() {
-                                button.style.backgroundColor = "grey";
-                            }, 300);
+                            button.style.backgroundColor = "grey";
 
                         } catch (error) {
                             console.error('Error reading value:', error);
                         }
-                    };
                 }
+
+                // Test to measure fetch time from BLE device
+                async function performanceTest(characteristic, button) {
+                    let data = [];
+                    const stallFor = 1000 // ms
+                    const iterations = 5
+
+                    button.style.backgroundColor = "orange"
+                    button.innerText = "Running performance test.."
+                    console.log("Starting performance test...")
+
+                    for (let i = 0; i < iterations; i++) {
+                        // Start timer
+                        let startTime = performance.now();
+                        let value = await characteristic.readValue();
+                        let endTime = performance.now();
+                        // Calculate elapsed time
+                        let elapsedTime = endTime - startTime;
+
+                        // Add result to JSON
+                        let iterationData = {
+                            "time": elapsedTime,
+                            "value": value.getUint8(0)
+                        };
+                        data.push(iterationData);
+
+                        // Pausa i 1 sekund mellan varje iteration
+                        await new Promise(resolve => setTimeout(resolve, stallFor));
+                    }
+
+                    // Make json file and download
+                    let jsonData = JSON.stringify(data, null, 2);
+                    let fileName = 'performance_data.json';
+                    let blob = new Blob([jsonData], { type: 'application/json' });
+                    let url = URL.createObjectURL(blob);
+                    let link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    button.style.backgroundColor = "#0096FF";
+                }
+
 
                 // Starts observe
                 document.getElementById('observeLevel').addEventListener('click', startNotifications(batteryLevel, document.getElementById('observeLevel')));
+
                 document.getElementById('observeVoltage').addEventListener('click', startNotifications(batteryVoltage, document.getElementById('observeVoltage')));
+
                 document.getElementById('observeAmpere').addEventListener('click', startNotifications(batteryAmpere, document.getElementById('observeAmpere')));
 
                 // Reads from gatt profile
-                document.getElementById('readLevel').addEventListener('click', readBLE(batteryLevel, batteryLevelContainer, document.getElementById('readLevel')));
-                document.getElementById('readVoltage').addEventListener('click', readBLEFloat(batteryVoltage, batteryVoltageContainer, document.getElementById('readVoltage')));
-                document.getElementById('readAmpere').addEventListener('click', readBLEFloat(batteryAmpere, batteryAmpereContainer, document.getElementById('readAmpere')));
+                readLevel = document.getElementById('readLevel');
+                readLevel.addEventListener('click', () => readBLE(batteryLevel, batteryLevelContainer, readLevel), {capture: false});
 
+                readVoltage = document.getElementById('readVoltage');
+                readVoltage.addEventListener('click', () => readBLEFloat(batteryVoltage, batteryVoltageContainer, readVoltage), {capture: true});
 
+                readAmpere = document.getElementById('readAmpere');
+                readAmpere.addEventListener('click', () => readBLEFloat(batteryAmpere, batteryAmpereContainer, readAmpere), {capture: true});
+
+                // Performance test
+                startPerformance = document.getElementById('performanceTest');
+                startPerformance.addEventListener('click', () => performanceTest(batteryLevel, startPerformance));
 
             } catch (error) {
                 console.error('Bluetooth error:', error);
