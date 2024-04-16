@@ -86,9 +86,9 @@ A ``cancel`` argument can be used in order to cancel an existing observation.
 See ``observe_3_0_13()`` example in ``handlers.py`` on how to trigger a periodic observation.  
 
 # BLE gateway
-The BLE gateway retrives data from specified GATT uuids (using notify) and stores it locally making it possible for each observe to fetch correct data, in this way only one BLE instance is initiated. The gw starts when the client starts. OBS! This gw is made to work on Mac OSX which uses name to connect to BL devices (change d.name == "BLE Battery Demo").
+The BLE gateway retrives data from specified GATT uuids (currently supporting notify and read). The gw starts when the client starts and gets invoked with different functions started from client.py. OBS! This gw is made to work on Mac OSX which uses name to connect to BL devices (change d.name == "BLE Battery Demo").
 
-To add or change a notification handler change or add this code ``await client.start_notify("insert uuid with notify here", b_level_notification_handler)`` in the handlers.py. You also need to add a handler function which uses another function to store the new value in the global variabel and some other functions (see already implemented functions), this can be improved by implementing object language structure.
+To add or change a notification handler change or add this code ``control_observe("notify uuid here", your_notification_handler, "flag name", "observe_3411_0_X")`` in the loop, as well as related funtions in the handlers.py. Look at existing code to create a read function and initiate ``read_value_from_ble()``.
 
 
 # License
