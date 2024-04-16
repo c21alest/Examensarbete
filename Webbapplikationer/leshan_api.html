@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RESTful API Demo</title>
+</head>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 2;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+table {
+    width: 400px;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th {
+    background-color: #f2f2f2;
+    color: #333;
+    font-weight: bold;
+    padding: 8px;
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+}
+
+td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+button {
+    background-color: grey;
+    border: none;
+    color: white;
+    padding: 10px 18px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 13px;
+    margin: 3px 2px;
+    cursor: pointer;
+}
+
+table button {
+    background-color: grey;
+    border: none;
+    color: white;
+    padding: 10px 18px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 13px;
+    margin: 3px 2px;
+    cursor: pointer;
+}
+
+#main_name {
+    visibility: hidden;
+}
+
+</style>
+<body>
+    <h3>Panel for accessing Leshan API</h3>
+    <table>
+        <tr>
+            <th>Service</th>
+            <th>Value</th>
+        </tr>
+        <tr>
+            <td>Battery Level</td>
+            <td id="battery_level_container"></td>
+            <td><button id="readLevel">Read</button></td>
+        </tr>
+        <tr>
+            <td>Battery Voltage</td>
+            <td id="battery_voltage_container"></td>
+            <td><button id="readVoltage">Read</button></td>
+        </tr>
+        <tr>
+            <td>Battery Ampere</td>
+            <td id="battery_ampere_container"></td>
+            <td><button id="readAmpere">Read</button></td>
+        </tr>
+    </table>
+    <script>
+        document.getElementById('readLevel').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:8081/http://localhost:8080/api/clients/battery-sensor/3411/0/1');
+                const data = await response.json();
+
+                document.getElementById('readLevel').style.backgroundColor = "green"
+
+                document.getElementById('battery_level_container').innerText = data.content.value;
+
+                setTimeout(function() {
+                    document.getElementById('readLevel').style.backgroundColor = "grey";
+                }, 300);
+            } catch (error) {
+                console.error('Error reading battery level:', error);
+            }
+        });
+
+        document.getElementById('readVoltage').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:8081/http://localhost:8080/api/clients/battery-sensor/3411/0/3');
+                const data = await response.json();
+
+                document.getElementById('readVoltage').style.backgroundColor = "green"
+
+                document.getElementById('battery_voltage_container').innerText = data.content.value;
+
+                setTimeout(function() {
+                    document.getElementById('readVoltage').style.backgroundColor = "grey";
+                }, 300);
+            } catch (error) {
+                console.error('Error reading battery voltage:', error);
+            }
+        });
+
+        document.getElementById('readAmpere').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:8081/http://localhost:8080/api/clients/battery-sensor/3411/0/2');
+                const data = await response.json();
+
+                document.getElementById('readAmpere').style.backgroundColor = "green"
+
+                document.getElementById('battery_ampere_container').innerText = data.content.value;
+
+                setTimeout(function() {
+                    document.getElementById('readVoltage').style.backgroundColor = "grey";
+                }, 300);
+            } catch (error) {
+                console.error('Error reading battery ampere:', error);
+            }
+        });
+
+    </script>
+</body>
+</html>
