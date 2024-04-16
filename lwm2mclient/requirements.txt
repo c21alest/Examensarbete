@@ -1,4 +1,3 @@
 hexdump==3.3
-# TODO: move to stable aiocoap soon
-git+https://github.com/chrysn/aiocoap@bd9faf757b0ae24fdd155b1ef711ca12ea85ddaf
+git+https://github.com/WattageGuy/aiocoap.git
 -e .
