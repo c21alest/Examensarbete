@@ -1,2 +1,2 @@
-# Examensarbete - Leshan vs Web Bluetooth API
-Detta är ett arkiv för ett examensarbete som har i syfte att undersöka skillnanden av att använda Leshan jämfört med Web Bluetooth API för att övervaka BLE enheter.
+# Examensarbete/Thesis - LWM2M vs Web Bluetooth API
+This is an archive for a thesis aimed at examining the differences between using LWM2M and Web Bluetooth API for monitoring BLE devices.
