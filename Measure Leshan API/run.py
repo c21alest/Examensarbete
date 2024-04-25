@@ -5,8 +5,8 @@ import time
 url = "http://localhost:8080/api/clients/battery-sensor/3411/0/1?timeout=5&format=TLV"
 #url = "http://localhost:8081/http://localhost:8080/api/clients/battery-sensor/3411/0/1?timeout=5&format=TLV" # With CORS Proxy
 
-iterations = 20
-stallFor = 1 # seconds
+iterations = 40
+stallFor = 4 # seconds
 data = []
 
 for i in range(iterations):
@@ -26,11 +26,12 @@ for i in range(iterations):
     }
     data.append(iteration_data)
 
+    print("Done with iteration {}".format(i))
     # Stall/Pause
     time.sleep(stallFor)
 
 # Create JSON file with result
-with open('performance_data.json', 'w') as outfile:
+with open('performance_data-Leshan.json', 'w') as outfile:
     json.dump(data, outfile, indent=4)
 
 print("Data har sparats i performance_data.json")

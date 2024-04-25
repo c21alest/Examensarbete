@@ -74,7 +74,7 @@ void loop() {
     pBlevelCharacteristic->setValue((uint8_t*)&batteryLevel, sizeof(batteryLevel));
     pBlevelCharacteristic->notify();
 
-    delay(random(4000, 7000));
+    delay(random(2000, 7000));
 
     // Generate random voltage level
     int voltageNoDecimal = random(34, 39);
@@ -83,7 +83,7 @@ void loop() {
     pCBvoltageCharacteristic->setValue((uint8_t*)&voltageInt, sizeof(voltageInt));
     pCBvoltageCharacteristic->notify();
 
-    delay(random(4000, 7000));
+    delay(random(2000, 7000));
 
     // Generate random Ampere level
     int ampereNoDecimal = random(3, 6);
@@ -92,7 +92,7 @@ void loop() {
     pCBampereCharacteristic->setValue((uint8_t*)&ampereInt, sizeof(ampereInt));
     pCBampereCharacteristic->notify();
 
-    delay(random(4000, 7000));
+    delay(random(2000, 7000));
 
   }
 
