@@ -1,3 +1,5 @@
+#include <ArduinoJson.h>
+#include <ArduinoJson.hpp>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -8,6 +10,7 @@ BLEService* pService;
 BLECharacteristic* pBlevelCharacteristic;
 BLECharacteristic* pCBvoltageCharacteristic;
 BLECharacteristic* pCBampereCharacteristic;
+BLECharacteristic* pCTextCharacteristic;
 
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
@@ -16,6 +19,8 @@ bool oldDeviceConnected = false;
 #define BATTERY_LEVEL_CHARACTERISTIC_UUID "00002A19-0000-1000-8000-00805F9B34FB"
 #define CUSTOM_BATTERY_VOLTAGE_CHARACTERISTIC_UUID "347BA623-F41A-4B59-A508-DE45079B4F20"
 #define CUSTOM_BATTERY_AMPERE_CHARACTERISTIC_UUID "32B4E46D-807F-4E75-ADD7-B08A613E76F3"
+#define CUSTOM_BATTERY_AMPERE_CHARACTERISTIC_UUID "32B4E46D-807F-4E75-ADD7-B08A613E76F3"
+#define CUSTOM_BYTE_ARRAY_CHARACTERISTIC_UUID "7AC7B653-6E94-4976-A5DB-9253BDDD5727"
 
 class MyServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
@@ -60,6 +65,14 @@ void setup() {
                    );
   pCBampereCharacteristic->addDescriptor(new BLE2902());
 
+  // Text:
+  pCTextCharacteristic = pService->createCharacteristic(
+                     CUSTOM_BYTE_ARRAY_CHARACTERISTIC_UUID,
+                     BLECharacteristic::PROPERTY_READ |
+                     BLECharacteristic::PROPERTY_NOTIFY
+                   );
+  pCTextCharacteristic->addDescriptor(new BLE2902());
+
   pService->start();
 
   Serial.println("GATT Server started");
@@ -94,6 +107,40 @@ void loop() {
 
     delay(random(1000, 4000));
 
+    // Prepare battery information JSON
+    DynamicJsonDocument jsonDoc(1024); // Assuming 512 bytes is sufficient
+    JsonObject batteryInfo = jsonDoc.createNestedObject("battery_info");
+    batteryInfo["manufacturer"] = "ABC Batteries Inc.";
+    batteryInfo["model"] = "BLi30";
+    batteryInfo["capacity_Ah"] = 7.7;
+    batteryInfo["voltage_V"] = 36;
+    batteryInfo["chemistry"] = "Li-Ion";
+    batteryInfo["status"] = "Good";
+    batteryInfo["charge_cycles"] = 150;
+    batteryInfo["health"] = "Excellent";
+    batteryInfo["temperature_C"] = 25.5;
+    batteryInfo["charging"] = false;
+    batteryInfo["charging_method"] = "Unkown";
+    batteryInfo["last_charge_time"] = "2024-04-11T15:30:00Z";
+    batteryInfo["estimated_runtime_minutes"] = 240;
+
+    JsonObject additionalInfo = batteryInfo.createNestedObject("additional_info");
+    additionalInfo["serial_number"] = "ABC123456789";
+    additionalInfo["manufacturing_date"] = "2024-03-01";
+    additionalInfo["country_of_origin"] = "Sweden";
+
+    JsonArray features = additionalInfo.createNestedArray("features");
+    features.add("overcharge protection");
+    features.add("temperature control");
+
+    size_t jsonSize = measureJson(jsonDoc);
+    Serial.println("JSON size: " + String(jsonSize) + " byte");
+
+    String jsonString;
+    serializeJson(jsonDoc, jsonString);
+
+    pCTextCharacteristic->setValue((uint8_t*)jsonString.c_str(), jsonString.length());
+    pCTextCharacteristic->notify();
   }
 
   // If new connection

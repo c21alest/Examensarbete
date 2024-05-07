@@ -5,8 +5,8 @@ import time
 url = "http://localhost:8080/api/clients/battery-sensor/3411/0/1?timeout=5&format=TLV"
 #url = "http://localhost:8081/http://localhost:8080/api/clients/battery-sensor/3411/0/1?timeout=5&format=TLV" # With CORS Proxy
 
-iterations = 40
-stallFor = 4 # seconds
+iterations = 100
+stallFor = 10 # seconds
 data = []
 
 for i in range(iterations):
@@ -22,7 +22,8 @@ for i in range(iterations):
     # Add result to JSON
     iteration_data = {
         "time": fetch_time,
-        "value": value
+        "measurement": i,
+        "value": int(value)
     }
     data.append(iteration_data)
 
@@ -31,7 +32,7 @@ for i in range(iterations):
     time.sleep(stallFor)
 
 # Create JSON file with result
-with open('performance_data-Leshan.json', 'w') as outfile:
+with open('performance_data-Leshan_API.json', 'w') as outfile:
     json.dump(data, outfile, indent=4)
 
 print("Data har sparats i performance_data.json")
