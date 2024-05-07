@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 
 from aiocoap import error, resource
 from aiocoap.message import Message
@@ -24,6 +25,7 @@ class RequestHandler(ObservableResource):
         self.decoder = decoder
 
     async def handle_read(self, path):
+        start_time = time.time()
         if path == ('3411', '0', '1'):
             value = await read_battery_level()
             await self.model.set_resource('3411', '0', "1", value)
@@ -33,6 +35,37 @@ class RequestHandler(ObservableResource):
         elif path == ('3411', '0', '3'):
             value = await read_battery_voltage()
             await self.model.set_resource('3411', '0', "3", value)
+        elif path == ('3411', '0', '4'):
+            value = await read_battery_text()
+            jsonObject = json.loads(value)
+            await self.model.set_resource('3411', '0', "4", jsonObject["battery_info"]["chemistry"])
+        elif path == ('3411', '0', '12'):
+            iterations = 101
+            stallFor = 10 # Seconds
+            data = []
+            for i in range(iterations):
+                start_time = time.time()  # Start timer
+                value = await read_battery_level()
+                end_time = time.time()
+                fetch_time = (end_time - start_time) * 1000  # Calculate elapsed time in ms
+
+                # Add result to JSON
+                iteration_data = {
+                    "time": fetch_time,
+                    "measurement": i,
+                    "value": value
+                }
+                data.append(iteration_data)
+
+                print("Done with iteration {}".format(i))
+                await asyncio.sleep(stallFor)
+
+            with open('performance_data-Leshan_internal.json', 'w') as outfile:
+                json.dump(data, outfile, indent=4)
+
+            print("Mätdatan har sparats")
+
+        print("--- (READ) Request took %s ms to handle ---" % ((time.time() - start_time)* 1000))
         return self.encoder.encode(path)
 
     def handle_write(self, path, payload, content_format):

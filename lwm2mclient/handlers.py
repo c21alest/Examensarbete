@@ -1,11 +1,15 @@
 import asyncio
 import logging
+import string
+
 from bleak import BleakScanner, BleakClient
+import time
 
 # Event to watch for new data
 battery_level_event = asyncio.Event()
 battery_ampere_event = asyncio.Event()
 battery_voltage_event = asyncio.Event()
+battery_text_event = asyncio.Event()
 
 ble_read_event = asyncio.Event()
 
@@ -13,6 +17,7 @@ ble_read_event = asyncio.Event()
 battery_level_value = 0
 battery_ampere_value = 0
 battery_voltage_value = 0
+battery_text_value = ""
 
 # Globals for read characteristic data
 ble_read_value = ""
@@ -43,18 +48,21 @@ def store_read_value(new_value):
 
 
 # Flags for canceling observe
-cancel_flags_observe = {"observe_3411_0_1": False, "observe_3411_0_2": False, "observe_3411_0_3": False, "disconnect_ble": False}
+cancel_flags_observe = {"observe_3411_0_1": False, "observe_3411_0_2": False, "observe_3411_0_3": False,
+                        "disconnect_ble": False}
 
 # Flags for if to start observe
-start_flags_observe = {"battery_level": False, "battery_ampere": False, "battery_voltage": False}
+start_flags_observe = {"battery_level": False, "battery_ampere": False, "battery_voltage": False, "battery_text": False}
 
 # Flag if to read gatt
 read_ble_value = False
+
 
 def handle_factory_reset(*args, **kwargs):
     global cancel_flags_observe
     cancel_flags_observe["disconnect_ble"] = True
     log.info(f'handle_factory_reset(): {args}, {kwargs}')
+
 
 # Main function to read from BLE
 async def read_ble():
@@ -72,10 +80,16 @@ async def read_ble():
             async def read_value_from_ble():
                 global read_ble_value, ble_read_uuid
                 if read_ble_value:
+                    start_time = time.time()
                     data = await client.read_gatt_char(ble_read_uuid)
-                    return_value = int.from_bytes(data, byteorder="little")  # Bytesarray is returned
+                    print("--- (READ) Fetch took %s ms ---" % ((time.time() - start_time) * 1000))
+                    if ble_read_uuid == "7AC7B653-6E94-4976-A5DB-9253BDDD5727":
+                        print("Read is bytes")
+                        return_value = data.decode("utf-8")
+                    else:
+                        return_value = int.from_bytes(data, byteorder="little")  # Bytesarray is returned
                     store_read_value(return_value)
-                    #print("UUID: ", ble_read_uuid, " returned: ", return_value)
+                    # print("UUID: ", ble_read_uuid, " returned: ", return_value)
                     ble_read_event.set()
                     read_ble_value = False
 
@@ -182,6 +196,15 @@ async def read_battery_voltage() -> float:
     await ble_read_event.wait()
     ble_read_event.clear()
     return ble_read_value / 1000.0
+
+
+async def read_battery_text() -> string:
+    global read_ble_value, ble_read_uuid, ble_read_value
+    ble_read_uuid = "7AC7B653-6E94-4976-A5DB-9253BDDD5727"
+    read_ble_value = True
+    await ble_read_event.wait()
+    ble_read_event.clear()
+    return ble_read_value
 
 
 def observe_3411_0_1(*args, **kwargs):
