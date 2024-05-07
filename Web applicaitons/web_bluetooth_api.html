@@ -104,7 +104,11 @@ table button {
             <td><button id="readAmpere">Read</button></td>
         </tr>
     </table>
+    <button style="background-color: grey;" id="readByteArray">Read Byte Array</button>
+    <p id="battery_text_container"></p>
     <button id="performanceTest">Start performance test</button>
+    <br>
+    <!-- <button id="performanceTestMultiple">Start performance test (Multiple)</button> -->
     <script>
         document.getElementById('connectButton').addEventListener('click', async () => {
             try {
@@ -127,11 +131,15 @@ table button {
                 const batteryLevel = await service.getCharacteristic('00002a19-0000-1000-8000-00805f9b34fb');
                 const batteryVoltage = await service.getCharacteristic('347ba623-f41a-4b59-a508-de45079b4f20');
                 const batteryAmpere = await service.getCharacteristic('32b4e46d-807f-4e75-add7-b08a613e76f3');
+                const batteryText = await service.getCharacteristic('7ac7b653-6e94-4976-a5db-9253bddd5727');
+
+                const uuids = [batteryLevel, batteryVoltage, batteryAmpere, batteryText]
 
                 // Containers where data is shown
                 const batteryLevelContainer = document.getElementById("battery_level_container");
                 const batteryVoltageContainer = document.getElementById("battery_voltage_container");
                 const batteryAmpereContainer = document.getElementById("battery_ampere_container");
+                const batteryTextContainer = document.getElementById("battery_text_container");
 
                 // Add event listener for characteristics
                 batteryLevel.addEventListener('characteristicvaluechanged', (event) => {
@@ -169,9 +177,21 @@ table button {
                 async function readBLE(characteristic, container, button) {
                     button.style.backgroundColor = "green"
                         try {
+                            let startTime2 = performance.now();
+                            let startTime = performance.now();
                             const value = await characteristic.readValue();
+                            let endTime = performance.now();
+                            // Calculate elapsed time
+                            let elapsedTime = endTime - startTime;
+                            console.log("--- (READ) fetch took ", elapsedTime, " seconds ---")
+
                             container.innerText = value.getUint8(0)
                             button.style.backgroundColor = "grey";
+
+                            let endTime2 = performance.now();
+                            // Calculate elapsed time
+                            let elapsedTime2 = endTime2 - startTime2;
+                            console.log("--- (READ) Action took ", elapsedTime2, " seconds to handle ---")
 
                         } catch (error) {
                             console.error('Error reading value:', error);
@@ -192,11 +212,30 @@ table button {
                         }
                 }
 
+                async function readBLEText(characteristic, container, button) {
+                    button.style.backgroundColor = "green"
+                        try {
+                            const value = await characteristic.readValue();
+                            //console.log(value);
+                            const decoder = new TextDecoder('utf-8');
+                            const text = decoder.decode(value);
+                            console.log(text);
+                            container.innerText = text;
+                            const encoder = new TextEncoder();
+                            const bytes = encoder.encode(text).length;
+                            console.log("Bytes: " + bytes);
+                            button.style.backgroundColor = "grey";
+
+                        } catch (error) {
+                            console.error('Error reading value:', error);
+                        }
+                }
+
                 // Test to measure fetch time from BLE device
                 async function performanceTest(characteristic, button) {
                     let data = [];
-                    const stallFor = 1000 // ms
-                    const iterations = 5
+                    const stallFor = 10000 // ms
+                    const iterations = 100
 
                     button.style.backgroundColor = "orange"
                     button.innerText = "Running performance test.."
@@ -217,13 +256,15 @@ table button {
                         };
                         data.push(iterationData);
 
+                        console.log("Done with itteration ", i);
+
                         // Pausa i 1 sekund mellan varje iteration
                         await new Promise(resolve => setTimeout(resolve, stallFor));
                     }
 
                     // Make json file and download
                     let jsonData = JSON.stringify(data, null, 2);
-                    let fileName = 'performance_data.json';
+                    let fileName = 'performance_data-Web_Bluetooth_API_singel.json';
                     let blob = new Blob([jsonData], { type: 'application/json' });
                     let url = URL.createObjectURL(blob);
                     let link = document.createElement('a');
@@ -232,6 +273,67 @@ table button {
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
+
+                    console.log("Mätvärden sparad i JSON fil");
+
+                    button.style.backgroundColor = "#0096FF";
+                }
+
+                // Test to measure fetch time from BLE device
+                async function performanceTestMultiple(button, uuids) {
+                    let data = [];
+                    const stallFor = 4000 // ms
+                    const iterations = 40
+
+                    button.style.backgroundColor = "orange"
+                    button.innerText = "Running performance test.."
+                    console.log("Starting performance test...")
+
+                    for (let i = 0; i < iterations; i++) {
+                        // Start timer
+                        let startTime = performance.now();
+                        let value = await uuids[1].readValue();
+
+                        let value1Raw = await uuids[2].readValue();
+                        let value1Int = value1Raw.getUint32(0, true);
+                        let value1 = value1Int / 1000.0;
+
+                        let value2Raw = await uuids[3].readValue();
+                        let value2Int = value2Raw.getUint32(0, true);
+                        let value2 = value2Int / 1000.0;
+
+                        let endTime = performance.now();
+                        // Calculate elapsed time
+                        let elapsedTime = endTime - startTime;
+
+                        // Add result to JSON
+                        let iterationData = {
+                            "total time": elapsedTime,
+                            "Battery Level": value.getUint8(0),
+                            "Battery Voltage": value1.toFixed(3),
+                            "Battery Ampere": value2.toFixed(3)
+                        };
+                        data.push(iterationData);
+
+                        console.log("Done with itteration ", i);
+
+                        // Pausa i 1 sekund mellan varje iteration
+                        await new Promise(resolve => setTimeout(resolve, stallFor));
+                    }
+
+                    // Make json file and download
+                    let jsonData = JSON.stringify(data, null, 2);
+                    let fileName = 'performance_data-Web_Bluetooth_API_multiple.json';
+                    let blob = new Blob([jsonData], { type: 'application/json' });
+                    let url = URL.createObjectURL(blob);
+                    let link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                     console.log("Mätvärden sparad i JSON fil")
 
                     button.style.backgroundColor = "#0096FF";
                 }
@@ -254,9 +356,16 @@ table button {
                 readAmpere = document.getElementById('readAmpere');
                 readAmpere.addEventListener('click', () => readBLEFloat(batteryAmpere, batteryAmpereContainer, readAmpere), {capture: true});
 
+                readByte = document.getElementById('readByteArray');
+                readByte.addEventListener('click', () => readBLEText(batteryText, batteryTextContainer, readByte), {capture: true});
+
                 // Performance test
                 startPerformance = document.getElementById('performanceTest');
                 startPerformance.addEventListener('click', () => performanceTest(batteryLevel, startPerformance));
+
+                // Performance test multiple
+                //startPerformanceMultiple = document.getElementById('performanceTestMultiple');
+                //startPerformanceMultiple.addEventListener('click', () => performanceTestMultiple(startPerformanceMultiple));
 
             } catch (error) {
                 console.error('Bluetooth error:', error);
